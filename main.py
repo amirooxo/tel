@@ -10,6 +10,10 @@ from gtts import gTTS
 import asyncio
 from io import BytesIO
 import google.generativeai as genai
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -19,10 +23,21 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Bot configuration
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "YOUR_TELEGRAM_BOT_TOKEN")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "YOUR_GEMINI_API_KEY")
-YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY", "YOUR_YOUTUBE_API_KEY")
-TMDB_API_KEY = os.getenv("TMDB_API_KEY", "YOUR_TMDB_API_KEY")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+
+# Check if required tokens are available
+if not TELEGRAM_TOKEN:
+    logger.error("TELEGRAM_TOKEN not found in environment variables")
+    exit(1)
+if not GEMINI_API_KEY:
+    logger.error("GEMINI_API_KEY not found in environment variables")
+    exit(1)
+if not YOUTUBE_API_KEY:
+    logger.error("YOUTUBE_API_KEY not found in environment variables")
+    exit(1)
 
 # User configuration
 USER_NAME = "بهنوش"
