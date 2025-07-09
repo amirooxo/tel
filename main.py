@@ -4,8 +4,8 @@ import requests
 import json
 import random
 import logging
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 from gtts import gTTS
 import asyncio
 from io import BytesIO
@@ -179,15 +179,49 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_message = f"""
 سلام {USER_NAME} عزیز! من {BOT_NAME}، دستیار شخصی توام 💙
 
-🎵 برای جستجوی موزیک: /song [نام آهنگ یا خواننده]
-🎬 برای جستجوی فیلم: /movie [نام فیلم]
-😂 برای شنیدن جک: /joke
-💬 برای گفتگو: /talk [پیام] یا فقط پیام بفرست
-📋 برای راهنمای کامل: /help
-
-منتظر دستوراتتم! 😊
+از منوی زیر می‌تونی به راحتی از قابلیت‌هام استفاده کنی:
 """
-    await update.message.reply_text(welcome_message)
+    
+    # Create inline keyboard menu
+    keyboard = [
+        [
+            InlineKeyboardButton("🎵 جستجوی موزیک", callback_data='search_music'),
+            InlineKeyboardButton("🎬 جستجوی فیلم", callback_data='search_movie')
+        ],
+        [
+            InlineKeyboardButton("😂 جک بگو", callback_data='tell_joke'),
+            InlineKeyboardButton("💬 گفتگو", callback_data='start_chat')
+        ],
+        [
+            InlineKeyboardButton("📋 راهنما", callback_data='show_help'),
+            InlineKeyboardButton("🔄 منوی اصلی", callback_data='main_menu')
+        ]
+    ]
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(welcome_message, reply_markup=reply_markup)
+
+async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Menu command handler"""
+    menu_message = f"{USER_NAME} جان، منوی اصلی:"
+    
+    keyboard = [
+        [
+            InlineKeyboardButton("🎵 جستجوی موزیک", callback_data='search_music'),
+            InlineKeyboardButton("🎬 جستجوی فیلم", callback_data='search_movie')
+        ],
+        [
+            InlineKeyboardButton("😂 جک بگو", callback_data='tell_joke'),
+            InlineKeyboardButton("💬 گفتگو", callback_data='start_chat')
+        ],
+        [
+            InlineKeyboardButton("📋 راهنما", callback_data='show_help'),
+            InlineKeyboardButton("🔄 منوی اصلی", callback_data='main_menu')
+        ]
+    ]
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(menu_message, reply_markup=reply_markup)
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Help command handler"""
@@ -337,6 +371,84 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text(response)
 
+async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle button callbacks"""
+    query = update.callback_query
+    await query.answer()
+    
+    keyboard = [
+        [
+            InlineKeyboardButton("🎵 جستجوی موزیک", callback_data='search_music'),
+            InlineKeyboardButton("🎬 جستجوی فیلم", callback_data='search_movie')
+        ],
+        [
+            InlineKeyboardButton("😂 جک بگو", callback_data='tell_joke'),
+            InlineKeyboardButton("💬 گفتگو", callback_data='start_chat')
+        ],
+        [
+            InlineKeyboardButton("📋 راهنما", callback_data='show_help'),
+            InlineKeyboardButton("🔄 منوی اصلی", callback_data='main_menu')
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    if query.data == 'search_music':
+        text = f"{USER_NAME} جان، برای جستجوی موزیک، از دستور زیر استفاده کن:\n\n/song [نام آهنگ یا خواننده]\n\nمثال: /song محسن یگانه دیره"
+        await query.edit_message_text(text, reply_markup=reply_markup)
+        
+    elif query.data == 'search_movie':
+        text = f"{USER_NAME} جان، برای جستجوی فیلم، از دستور زیر استفاده کن:\n\n/movie [نام فیلم]\n\nمثال: /movie جدایی نادر از سیمین"
+        await query.edit_message_text(text, reply_markup=reply_markup)
+        
+    elif query.data == 'tell_joke':
+        joke = random.choice(JOKES)
+        audio_buffer = VoiceService.create_audio(joke)
+        
+        # Send audio first
+        if audio_buffer:
+            await query.message.reply_audio(audio_buffer, caption=joke)
+        else:
+            await query.message.reply_text(joke)
+            
+        # Then update the message with menu
+        await query.edit_message_text(f"{USER_NAME} جان، امیدوارم خوشت اومده باشه! 😊", reply_markup=reply_markup)
+        
+    elif query.data == 'start_chat':
+        text = f"{USER_NAME} جان، برای گفتگو می‌تونی:\n\n1️⃣ از دستور /talk استفاده کنی:\n/talk یه فیلم خوب معرفی کن\n\n2️⃣ یا مستقیماً پیام بفرستی بدون دستور"
+        await query.edit_message_text(text, reply_markup=reply_markup)
+        
+    elif query.data == 'show_help':
+        help_text = f"""
+راهنمای کامل ربات {BOT_NAME} 📖
+
+🎵 جستجوی موزیک:
+/song محسن یگانه - دیره
+/song شادمهر عقیلی
+
+🎬 جستجوی فیلم:
+/movie جدایی نادر از سیمین
+/movie مجید مجیدی
+
+😂 شنیدن جک:
+/joke یا از منو استفاده کن
+
+💬 گفتگو با هوش مصنوعی:
+/talk یه فیلم خوب معرفی کن
+یا فقط پیام بفرست بدون دستور
+
+🔄 دستورات دیگر:
+/start - شروع مجدد
+/menu - نمایش منو
+/help - این راهنما
+
+نکته: همه پاسخ‌ها به صورت صوتی و متنی ارسال می‌شوند 🎤
+"""
+        await query.edit_message_text(help_text, reply_markup=reply_markup)
+        
+    elif query.data == 'main_menu':
+        menu_text = f"{USER_NAME} جان، منوی اصلی:"
+        await query.edit_message_text(menu_text, reply_markup=reply_markup)
+
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Error handler"""
     logger.warning(f'Update {update} caused error {context.error}')
@@ -350,11 +462,13 @@ def main():
     
     # Add handlers
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("menu", menu_command))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("song", song_command))
     application.add_handler(CommandHandler("movie", movie_command))
     application.add_handler(CommandHandler("joke", joke_command))
     application.add_handler(CommandHandler("talk", talk_command))
+    application.add_handler(CallbackQueryHandler(button_callback))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     
     # Add error handler
